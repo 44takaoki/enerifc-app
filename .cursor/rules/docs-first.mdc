@@ -1,0 +1,27 @@
+---
+description: Enerifc 開発では docs/ を正とし、バックエンド先行・レビュー1000行・学習伴走を守る
+alwaysApply: true
+---
+
+# Enerifc 開発ルール
+
+作業前に `docs/README.md` から、今回の変更に関係する文書を読む。コードと仕様が違うときは先に `docs/` を更新する提案をする。
+
+必須参照:
+
+- 何を作るか: `docs/requirements.md`
+- 進捗とスライス: `docs/progress.md`
+- 進め方: `docs/development-guide.md`
+- 未決: `docs/decisions.md`
+
+原則:
+
+1. ユーザーが実装を頼むまで、巨大なアプリコードを書かない。今は docs が土台。
+2. 実装フェーズではバックエンド（Prisma / Supabase / API）を先にする。
+3. 1 つの変更は外部レビュー 1000 行以内。超えそうなら分割して提案する。
+4. 学習伴走: 方針を短く説明してから書く。理解できない一括生成をしない。
+5. That Open の React vs Lit は `docs/decisions.md` の DEC-01。未確定のままアプリ全体を Lit 化しない。
+6. マスタ値は入力シート Ver.3.10 由来。`docs/master-data.md` にない選択肢を invent しない。
+7. 秘密情報をコミットしない。ユーザーに頼まれたときだけ git commit する。
+
+Next.js の書き方はリポジトリの `AGENTS.md` と `node_modules/next/dist/docs/` に従う。
