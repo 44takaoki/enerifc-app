@@ -12,7 +12,7 @@
 | UI ライブラリ | React 19 | アプリの画面コンポーネント |
 | スタイル | Tailwind CSS 4 | Figma に近いユーティリティスタイリング |
 | BaaS | Supabase | Auth / Postgres / Storage |
-| ORM / スキーマ | Prisma | `public` テーブルの定義・マイグレーション・型付きアクセス |
+| ORM / スキーマ | Prisma 6 | `public` テーブルの定義・マイグレーション・型付きアクセス（7 は datasource の書き方が違うので、学習用に 6 で固定） |
 | IFC / 3D | That Open Engine | IFC 読み込み、Fragments、ビューア、プロパティ |
 
 実行環境の前提: Node.js 20.9 以上（Next.js 16 の要件）。

@@ -153,7 +153,7 @@ Fragments（`.frag`）をキャッシュする場合は別キー。DEC-06 で決
 
 [progress.md](./progress.md) Phase B と一致させる。1 スライス ≒ 1 レビュー。
 
-1. Prisma 初期化 + `master_program_versions` + enum
+1. Prisma 初期化 + `master_program_versions` + enum（B1 完了。定義は `prisma/schema.prisma`）
 2. マスタテーブル + seed（地域・用途・モデル建物）
 3. 残マスタ seed（建具・ガラス・断熱・方位・部位）
 4. `companies` / `profiles` + Auth トリガー SQL

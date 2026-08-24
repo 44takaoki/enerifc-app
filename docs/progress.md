@@ -1,7 +1,7 @@
 # 進捗とフェーズ
 
 最終更新: 2026-08-23  
-ステータス: **ドキュメント整備が完了。実装は未着手（Next.js 初期テンプレートのみ）。**
+ステータス: **B1 完了。次は B2（マスタ表の Prisma モデル）。**
 
 レビューは 1 回あたり差分 1000 行以内。[development-guide.md](./development-guide.md) 参照。
 
@@ -14,7 +14,7 @@
 | 完了 | レビュー可能な成果物がある |
 | ブロック | 未決（DEC）待ち |
 
-## フェーズ A — ドキュメント（現在）
+## フェーズ A — ドキュメント
 
 | スライス | 内容 | 状態 |
 |----------|------|------|
@@ -28,7 +28,7 @@
 
 | ID | スライス | 想定成果 | 行数目安 |
 |----|----------|----------|----------|
-| B1 | Prisma 導入、`.env.example`、`master_program_versions` と enum | migrate 1 本が通る | 小 |
+| B1 | Prisma 導入、`.env.example`、`master_program_versions` と enum | migrate 1 本（SQL 作成済み。Supabase 接続後に `npm run db:migrate`） | 小・完了 |
 | B2 | マスタ表の Prisma モデル（seed なしでも可） | `schema.prisma` に master_* | 中。大きいなら B2a/B2b |
 | B3 | seed スクリプト骨格 + 地域・用途・モデル建物 | 件数が docs と一致 | 中 |
 | B4 | 建具・方位・部位・断熱方法 seed | | 中 |
@@ -36,7 +36,7 @@
 | B6 | companies / profiles + Auth トリガー SQL | サインアップで profile が生える | 中 |
 | B7 | RLS ポリシー（プロフィールとマスタ） | SQL マイグレーション | 小〜中 |
 
-**次にやる推奨: B1。** DEC-01（React/Lit）はビューアまで確定しなくてよい。
+**次にやる推奨: B2。** DEC-01（React/Lit）はビューアまで確定しなくてよい。
 
 ## フェーズ C — 案件 API
 
@@ -87,8 +87,9 @@ DEC-01 を確認してから。
 
 ## 今のリポジトリ状態
 
-- `create-next-app` のまま（`app/page.tsx` は Next 初期画面）
-- Prisma / Supabase / That Open は未導入
+- Prisma 導入済み。enum と `master_program_versions` のマイグレーション 1 本
+- Supabase への migrate 適用は `.env` の接続文字列が必要
+- 画面・That Open は未着手
 - 計画 SQL はリポジトリ外 `enerifc_DB_plannning`
 
 ## 変更したら

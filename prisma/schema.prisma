@@ -1,0 +1,102 @@
+// Enerifc の public スキーマ定義。方針は docs/database.md。
+// B1: enum とプログラム版マスタのみ。他テーブルは B2 以降。
+// Prisma CLI は 6.x（datasource に url を書く）。拡張機能が 7 系だと警告が出ることがある。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Supabase はマイグレーションを Direct 接続（DIRECT_URL）で実行する
+  directUrl = env("DIRECT_URL")
+}
+
+// --- PostgreSQL enum（docs/database.md 4.2） ---
+
+enum ProjectStatus {
+  draft
+  ifc_extracting
+  review
+  calculating
+  completed
+  failed
+
+  @@map("project_status")
+}
+
+enum CalculationResultStatus {
+  draft
+  calculating
+  completed
+  failed
+
+  @@map("calculation_result_status")
+}
+
+enum OverallGoalStatus {
+  goal_achieved
+  not_achieved
+
+  @@map("overall_goal_status")
+}
+
+enum DataSource {
+  ifc_auto
+  manual
+
+  @@map("data_source")
+}
+
+enum ExtractionStatus {
+  pending
+  running
+  completed
+  failed
+
+  @@map("extraction_status")
+}
+
+enum IfcElementKind {
+  storey
+  space
+  slab
+  wall
+  roof
+  floor_on_grade
+  window
+  door
+  curtain_wall
+  other
+
+  @@map("ifc_element_kind")
+}
+
+enum OpeningInputMethod {
+  frame_and_glass
+  frame_and_glass_performance
+  window_performance
+
+  @@map("opening_input_method")
+}
+
+enum ApiRunStatus {
+  pending
+  completed
+  error
+
+  @@map("api_run_status")
+}
+
+// --- マスタ ---
+
+/// モデル建物法のプログラム版。他マスタの program_version がこれを参照する（B2）。
+model MasterProgramVersion {
+  version     String    @id @db.VarChar(20)
+  displayName String    @map("display_name") @db.VarChar(100)
+  isActive    Boolean   @default(true) @map("is_active")
+  releasedAt  DateTime? @map("released_at") @db.Date
+
+  @@map("master_program_versions")
+}

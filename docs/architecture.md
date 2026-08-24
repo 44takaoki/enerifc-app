@@ -112,7 +112,8 @@ prisma/              schema, migrations, seed
 |------|------|
 | `NEXT_PUBLIC_SUPABASE_URL` | ブラウザの Auth |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ブラウザ（RLS 前提） |
-| `DATABASE_URL` | Prisma（サーバのみ） |
+| `DATABASE_URL` | Prisma のクエリ（サーバのみ。Pooler 可） |
+| `DIRECT_URL` | `prisma migrate` 用の Direct 接続（サーバのみ） |
 | `SUPABASE_SERVICE_ROLE_KEY` | 管理作業のみ。安易に Route Handler へ出さない |
 | モデル建物法 API の URL / キー | サーバのみ |
 
