@@ -1,5 +1,5 @@
 // Enerifc の public スキーマ定義。方針は docs/database.md。
-// B1: enum とプログラム版マスタのみ。他テーブルは B2 以降。
+// B1: enum + プログラム版。B2: 残りの master_*（seed は B3 以降）。
 // Prisma CLI は 6.x（datasource に url を書く）。拡張機能が 7 系だと警告が出ることがある。
 
 generator client {
@@ -91,12 +91,146 @@ enum ApiRunStatus {
 
 // --- マスタ ---
 
-/// モデル建物法のプログラム版。他マスタの program_version がこれを参照する（B2）。
+/// モデル建物法のプログラム版。他マスタの program_version がこれを参照する。
 model MasterProgramVersion {
   version     String    @id @db.VarChar(20)
   displayName String    @map("display_name") @db.VarChar(100)
   isActive    Boolean   @default(true) @map("is_active")
   releasedAt  DateTime? @map("released_at") @db.Date
 
+  regionCategories         MasterRegionCategory[]
+  modelBuildings           MasterModelBuilding[]
+  buildingUses             MasterBuildingUse[]
+  frameTypes               MasterFrameType[]
+  glassTypes               MasterGlassType[]
+  insulationInputMethods   MasterInsulationInputMethod[]
+  insulationTypes          MasterInsulationType[]
+  envelopeParts            MasterEnvelopePart[]
+  orientations             MasterOrientation[]
+
   @@map("master_program_versions")
+}
+
+/// 地域区分（様式 A）。sheet_value は入力シートの表記（例: 6地域）。
+model MasterRegionCategory {
+  id             BigInt                @id @default(autoincrement())
+  programVersion String                @map("program_version") @db.VarChar(20)
+  sheetValue     String                @map("sheet_value") @db.VarChar(100)
+  displayName    String                @map("display_name") @db.VarChar(100)
+  sortOrder      Int                   @default(0) @map("sort_order")
+  program        MasterProgramVersion  @relation(fields: [programVersion], references: [version])
+
+  @@unique([programVersion, sheetValue])
+  @@map("master_region_categories")
+}
+
+/// 国定モデル建物。BEIm 注記は description。用途から参照される。
+model MasterModelBuilding {
+  id             BigInt                @id @default(autoincrement())
+  programVersion String                @map("program_version") @db.VarChar(20)
+  sheetValue     String                @map("sheet_value") @db.VarChar(100)
+  displayName    String                @map("display_name") @db.VarChar(100)
+  description    String?
+  sortOrder      Int                   @default(0) @map("sort_order")
+  program        MasterProgramVersion  @relation(fields: [programVersion], references: [version])
+  buildingUses   MasterBuildingUse[]
+
+  @@unique([programVersion, sheetValue])
+  @@map("master_model_buildings")
+}
+
+/// 建物用途。model_building_id で国定モデルが決まる。
+model MasterBuildingUse {
+  id              BigInt               @id @default(autoincrement())
+  programVersion  String               @map("program_version") @db.VarChar(20)
+  sheetValue      String               @map("sheet_value") @db.VarChar(200)
+  displayName     String               @map("display_name") @db.VarChar(200)
+  modelBuildingId BigInt               @map("model_building_id")
+  sortOrder       Int                  @default(0) @map("sort_order")
+  program         MasterProgramVersion @relation(fields: [programVersion], references: [version])
+  modelBuilding   MasterModelBuilding  @relation(fields: [modelBuildingId], references: [id])
+
+  @@unique([programVersion, sheetValue])
+  @@index([modelBuildingId], map: "idx_master_building_uses_model")
+  @@map("master_building_uses")
+}
+
+/// 建具種別（様式 B1）。
+model MasterFrameType {
+  id             BigInt                @id @default(autoincrement())
+  programVersion String                @map("program_version") @db.VarChar(20)
+  sheetValue     String                @map("sheet_value") @db.VarChar(100)
+  displayName    String?               @map("display_name") @db.VarChar(255)
+  sortOrder      Int                   @default(0) @map("sort_order")
+  program        MasterProgramVersion  @relation(fields: [programVersion], references: [version])
+
+  @@unique([programVersion, sheetValue])
+  @@map("master_frame_types")
+}
+
+/// ガラス符号（様式 B1）。sheet_value は 3WgG06 形式。
+model MasterGlassType {
+  id             BigInt                @id @default(autoincrement())
+  programVersion String                @map("program_version") @db.VarChar(20)
+  sheetValue     String                @map("sheet_value") @db.VarChar(20)
+  displayName    String?               @map("display_name") @db.VarChar(255)
+  sortOrder      Int                   @default(0) @map("sort_order")
+  program        MasterProgramVersion  @relation(fields: [programVersion], references: [version])
+
+  @@unique([programVersion, sheetValue])
+  @@map("master_glass_types")
+}
+
+/// 断熱の入力方法。method_code は seed で A〜E を振る（docs/master-data.md）。
+model MasterInsulationInputMethod {
+  id             BigInt                @id @default(autoincrement())
+  programVersion String                @map("program_version") @db.VarChar(20)
+  methodCode     String                @map("method_code") @db.Char(1)
+  sheetValue     String                @map("sheet_value") @db.VarChar(50)
+  displayName    String                @map("display_name") @db.VarChar(100)
+  sortOrder      Int                   @default(0) @map("sort_order")
+  program        MasterProgramVersion  @relation(fields: [programVersion], references: [version])
+
+  @@unique([programVersion, methodCode])
+  @@map("master_insulation_input_methods")
+}
+
+/// 断熱材。大分類 + 小分類。熱伝導率は小分類側に持つ。
+model MasterInsulationType {
+  id                   BigInt               @id @default(autoincrement())
+  programVersion       String               @map("program_version") @db.VarChar(20)
+  categoryMajor        String               @map("category_major") @db.VarChar(100)
+  categoryMinor        String?              @map("category_minor") @db.VarChar(100)
+  thermalConductivity  Decimal?             @map("thermal_conductivity") @db.Decimal(8, 4)
+  sheetValueMajor      String               @map("sheet_value_major") @db.VarChar(100)
+  sheetValueMinor      String?              @map("sheet_value_minor") @db.VarChar(100)
+  sortOrder            Int                  @default(0) @map("sort_order")
+  program              MasterProgramVersion @relation(fields: [programVersion], references: [version])
+
+  @@unique([programVersion, sheetValueMajor, sheetValueMinor], map: "master_insulation_types_version_major_minor_key")
+  @@map("master_insulation_types")
+}
+
+/// 外皮部位。display_name は DEC-07 が未決のため持たない。
+model MasterEnvelopePart {
+  id             BigInt                @id @default(autoincrement())
+  programVersion String                @map("program_version") @db.VarChar(20)
+  sheetValue     String                @map("sheet_value") @db.VarChar(50)
+  sortOrder      Int                   @default(0) @map("sort_order")
+  program        MasterProgramVersion  @relation(fields: [programVersion], references: [version])
+
+  @@unique([programVersion, sheetValue])
+  @@map("master_envelope_parts")
+}
+
+/// 方位。開口「なし」と外皮「屋根」「床」を同一テーブルに持つ（docs/master-data.md）。
+model MasterOrientation {
+  id             BigInt                @id @default(autoincrement())
+  programVersion String                @map("program_version") @db.VarChar(20)
+  sheetValue     String                @map("sheet_value") @db.VarChar(20)
+  sortOrder      Int                   @default(0) @map("sort_order")
+  program        MasterProgramVersion  @relation(fields: [programVersion], references: [version])
+
+  @@unique([programVersion, sheetValue])
+  @@map("master_orientations")
 }

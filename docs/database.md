@@ -109,22 +109,24 @@ SQL の snake_case テーブル名を `@@map` で維持し、Prisma モデルは
 
 ## 6. マスタ一覧
 
-seed の中身は [master-data.md](./master-data.md)。
+seed の中身は [master-data.md](./master-data.md)。物理テーブル名は `prisma/schema.prisma` の `@@map`（計画 SQL と同じ）。
 
-| テーブル | 一意 | 画面 |
-|----------|------|------|
-| `master_program_versions` | `version` | 内部 |
-| `master_region_categories` | `(program_version, sheet_value)` | 基本情報 |
-| `master_model_buildings` | `(program_version, sheet_value)` | 用途から間接参照 |
-| `master_building_uses` | `(program_version, sheet_value)` | 基本情報 |
-| `master_frame_types` | `(program_version, sheet_value)` | 開口部 |
-| `master_glass_types` | `(program_version, sheet_value)` | 開口部 |
-| `master_insulation_input_methods` | `(program_version, method_code)` | 断熱 |
-| `master_insulation_types` | `(program_version, sheet_value_major, sheet_value_minor)` | 断熱 |
-| `master_envelope_parts` | `(program_version, sheet_value)` | 断熱・外皮 |
-| `master_orientations` | `(program_version, sheet_value)` | 開口・外皮 |
+| テーブル | Prisma モデル | 一意 | 画面 |
+|----------|---------------|------|------|
+| `master_program_versions` | `MasterProgramVersion` | `version` | 内部 |
+| `master_region_categories` | `MasterRegionCategory` | `(program_version, sheet_value)` | 基本情報 |
+| `master_model_buildings` | `MasterModelBuilding` | `(program_version, sheet_value)` | 用途から間接参照 |
+| `master_building_uses` | `MasterBuildingUse` | `(program_version, sheet_value)` | 基本情報 |
+| `master_frame_types` | `MasterFrameType` | `(program_version, sheet_value)` | 開口部 |
+| `master_glass_types` | `MasterGlassType` | `(program_version, sheet_value)` | 開口部 |
+| `master_insulation_input_methods` | `MasterInsulationInputMethod` | `(program_version, method_code)` | 断熱 |
+| `master_insulation_types` | `MasterInsulationType` | `(program_version, sheet_value_major, sheet_value_minor)` | 断熱 |
+| `master_envelope_parts` | `MasterEnvelopePart` | `(program_version, sheet_value)` | 断熱・外皮 |
+| `master_orientations` | `MasterOrientation` | `(program_version, sheet_value)` | 開口・外皮 |
 
-`master_envelope_parts` / `master_orientations` は計画上 `display_name` が無い。UI 用に `display_name` を足すかは DEC-07。
+`master_envelope_parts` / `master_orientations` は計画上 `display_name` が無い。UI 用に `display_name` を足すかは DEC-07（未決のまま列は足していない）。
+
+`master_insulation_types` の一意は `(program_version, sheet_value_major, sheet_value_minor)`。PostgreSQL では NULL 同士は同一とみなされないので、小分類が空の行を複数入れる場合は seed 側で空文字にするか、必ず minor を入れる（B5 で決める）。
 
 ## 7. RLS（最低限）
 
@@ -154,7 +156,7 @@ Fragments（`.frag`）をキャッシュする場合は別キー。DEC-06 で決
 [progress.md](./progress.md) Phase B と一致させる。1 スライス ≒ 1 レビュー。
 
 1. Prisma 初期化 + `master_program_versions` + enum（B1 完了。定義は `prisma/schema.prisma`）
-2. マスタテーブル + seed（地域・用途・モデル建物）
+2. マスタテーブルの Prisma モデル（B2 完了。seed なし）
 3. 残マスタ seed（建具・ガラス・断熱・方位・部位）
 4. `companies` / `profiles` + Auth トリガー SQL
 5. `projects` と RLS
