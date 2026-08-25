@@ -1,7 +1,7 @@
 # 進捗とフェーズ
 
-最終更新: 2026-08-24  
-ステータス: **B2 完了。次は B3（seed: 地域・用途・モデル建物）。**
+最終更新: 2026-08-25  
+ステータス: **B3 完了。次は B4（建具・方位・部位・断熱方法 seed）。**
 
 レビューは 1 回あたり差分 1000 行以内。[development-guide.md](./development-guide.md) 参照。
 
@@ -30,13 +30,15 @@
 |----|----------|----------|----------|
 | B1 | Prisma 導入、`.env.example`、`master_program_versions` と enum | migrate 1 本（SQL 作成済み。Supabase 接続後に `npm run db:migrate`） | 小・完了 |
 | B2 | マスタ表の Prisma モデル（seed なしでも可） | `schema.prisma` に master_* | 中・完了 |
-| B3 | seed スクリプト骨格 + 地域・用途・モデル建物 | 件数が docs と一致 | 中 |
+| B3 | seed スクリプト骨格 + 地域・用途・モデル建物 | 件数が docs と一致 | 中・完了 |
 | B4 | 建具・方位・部位・断熱方法 seed | | 中 |
-| B5 | ガラス 156 + 断熱材（親子孫） | データ PR として分離可 | 中〜大。分割必須になりやすい |
+| B5 | ガラス 156 + 断熱材（親子孫） | コンパクトな JSON 等。Phase B 一括レビューに含める | 中〜大 |
 | B6 | companies / profiles + Auth トリガー SQL | サインアップで profile が生える | 中 |
 | B7 | RLS ポリシー（プロフィールとマスタ） | SQL マイグレーション | 小〜中 |
 
-**次にやる推奨: B3。** DEC-01（React/Lit）はビューアまで確定しなくてよい。
+**次にやる推奨: B4。** DEC-01（React/Lit）はビューアまで確定しなくてよい。
+
+外部講師への依頼は B2 では出さない（DEC-16）。実装は B7 まで進め、**提出は B1〜B7 を 1 本にまとめる。** 1000 行超過時は依頼文で講師に伝える。
 
 ## フェーズ C — 案件 API
 
@@ -87,8 +89,8 @@ DEC-01 を確認してから。
 
 ## 今のリポジトリ状態
 
-- Prisma 導入済み。enum、`master_program_versions`、残りの `master_*` テーブル定義（seed なし）
-- Supabase への migrate 適用は `.env` の接続文字列が必要（B1 + B2 の 2 本）
+- Prisma 導入済み。enum、`master_*` 定義、B3 seed（地域 8・モデル 15・用途 15）
+- 投入: migrate 後に `npm run db:seed`
 - 画面・That Open は未着手
 - 計画 SQL はリポジトリ外 `enerifc_DB_plannning`
 

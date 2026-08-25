@@ -126,7 +126,7 @@ seed の中身は [master-data.md](./master-data.md)。物理テーブル名は 
 
 `master_envelope_parts` / `master_orientations` は計画上 `display_name` が無い。UI 用に `display_name` を足すかは DEC-07（未決のまま列は足していない）。
 
-`master_insulation_types` の一意は `(program_version, sheet_value_major, sheet_value_minor)`。PostgreSQL では NULL 同士は同一とみなされないので、小分類が空の行を複数入れる場合は seed 側で空文字にするか、必ず minor を入れる（B5 で決める）。
+`master_insulation_types` の一意は `(program_version, sheet_value_major, sheet_value_minor)`。minor が空の行の扱いは B5 で決める（DEC-18）。
 
 ## 7. RLS（最低限）
 
@@ -157,7 +157,8 @@ Fragments（`.frag`）をキャッシュする場合は別キー。DEC-06 で決
 
 1. Prisma 初期化 + `master_program_versions` + enum（B1 完了。定義は `prisma/schema.prisma`）
 2. マスタテーブルの Prisma モデル（B2 完了。seed なし）
-3. 残マスタ seed（建具・ガラス・断熱・方位・部位）
+3. seed 骨格 + 地域・用途・モデル建物（B3 完了。`prisma/seed.ts`）
+4. 残マスタ seed（建具・ガラス・断熱・方位・部位）
 4. `companies` / `profiles` + Auth トリガー SQL
 5. `projects` と RLS
 6. IFC・抽出・様式テーブル

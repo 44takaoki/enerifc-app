@@ -54,6 +54,8 @@ Enerifc は「動くもの」と同時に、実装者（あなた）が **自分
 
 切り方の例は [progress.md](./progress.md)。1 スライスが膨らみそうなら、実装前に分割案を出す。
 
+実装をフェーズ末まで進めてから講師に依頼してよい。Phase B は B1〜B7 を 1 依頼にまとめる（[decisions.md](./decisions.md) DEC-16）。他フェーズは原則 1000 行。
+
 ## 5. ブランチとコミット
 
 - 機能ブランチ: `feat/phase-b-prisma-init` のようにフェーズ＋内容
