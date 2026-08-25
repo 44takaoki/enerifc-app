@@ -9,10 +9,16 @@ const EXPECTED = {
   modelBuildings: 15,
   buildingUses: 15,
   frameTypes: 14,
+  glassTypes: 156,
+  insulationTypes: 73,
+  insulationMajors: 14,
+  insulationChildren: 59,
   envelopeParts: 3,
   orientations: 7,
   insulationInputMethods: 5,
 } as const;
+
+type InsulationSeedRow = { major: string; minor: string | null };
 
 const prisma = new PrismaClient();
 const dataDir = join(
@@ -26,6 +32,57 @@ function loadJson<T>(fileName: string): T {
   return JSON.parse(readFileSync(join(dataDir, fileName), "utf8")) as T;
 }
 
+async function upsertInsulationType(row: InsulationSeedRow, sortOrder: number) {
+  const data = {
+    programVersion: PROGRAM_VERSION,
+    categoryMajor: row.major,
+    categoryMinor: row.minor,
+    sheetValueMajor: row.major,
+    sheetValueMinor: row.minor,
+    sortOrder,
+  };
+
+  // Prisma の compound unique where は nullable 列に null を渡せないため分岐する（DEC-18）。
+  if (row.minor === null) {
+    const existing = await prisma.masterInsulationType.findFirst({
+      where: {
+        programVersion: PROGRAM_VERSION,
+        sheetValueMajor: row.major,
+        sheetValueMinor: null,
+      },
+    });
+    if (existing) {
+      await prisma.masterInsulationType.update({
+        where: { id: existing.id },
+        data: {
+          categoryMajor: row.major,
+          categoryMinor: null,
+          sortOrder,
+        },
+      });
+      return;
+    }
+    await prisma.masterInsulationType.create({ data });
+    return;
+  }
+
+  await prisma.masterInsulationType.upsert({
+    where: {
+      programVersion_sheetValueMajor_sheetValueMinor: {
+        programVersion: PROGRAM_VERSION,
+        sheetValueMajor: row.major,
+        sheetValueMinor: row.minor,
+      },
+    },
+    create: data,
+    update: {
+      categoryMajor: row.major,
+      categoryMinor: row.minor,
+      sortOrder,
+    },
+  });
+}
+
 async function main() {
   const regions = loadJson<string[]>("regions.json");
   const modelNames = loadJson<string[]>("model-buildings.json");
@@ -33,6 +90,8 @@ async function main() {
     "building-uses.json",
   );
   const frameTypes = loadJson<string[]>("frame-types.json");
+  const glassTypes = loadJson<string[]>("glass-types.json");
+  const insulationTypes = loadJson<InsulationSeedRow[]>("insulation-types.json");
   const envelopeParts = loadJson<string[]>("envelope-parts.json");
   const orientations = loadJson<string[]>("orientations.json");
   const insulationInputMethods = loadJson<
@@ -58,6 +117,37 @@ async function main() {
     throw new Error(
       `frame-types.json は ${EXPECTED.frameTypes} 件であるべき。実際: ${frameTypes.length}`,
     );
+  }
+  if (glassTypes.length !== EXPECTED.glassTypes) {
+    throw new Error(
+      `glass-types.json は ${EXPECTED.glassTypes} 件であるべき。実際: ${glassTypes.length}`,
+    );
+  }
+  if (new Set(glassTypes).size !== EXPECTED.glassTypes) {
+    throw new Error("glass-types.json に重複がある");
+  }
+  if (insulationTypes.length !== EXPECTED.insulationTypes) {
+    throw new Error(
+      `insulation-types.json は ${EXPECTED.insulationTypes} 件であるべき。実際: ${insulationTypes.length}`,
+    );
+  }
+  const majorOnlyRows = insulationTypes.filter((row) => row.minor === null);
+  const childRows = insulationTypes.filter((row) => row.minor !== null);
+  if (majorOnlyRows.length !== EXPECTED.insulationMajors) {
+    throw new Error(
+      `断熱材の大分類のみ行は ${EXPECTED.insulationMajors} 件であるべき。実際: ${majorOnlyRows.length}`,
+    );
+  }
+  if (childRows.length !== EXPECTED.insulationChildren) {
+    throw new Error(
+      `断熱材の小分類行は ${EXPECTED.insulationChildren} 件であるべき。実際: ${childRows.length}`,
+    );
+  }
+  const insulationKeys = new Set(
+    insulationTypes.map((row) => `${row.major}\0${row.minor ?? ""}`),
+  );
+  if (insulationKeys.size !== insulationTypes.length) {
+    throw new Error("insulation-types.json に (major, minor) の重複がある");
   }
   if (envelopeParts.length !== EXPECTED.envelopeParts) {
     throw new Error(
@@ -179,6 +269,28 @@ async function main() {
     });
   }
 
+  for (const [index, sheetValue] of glassTypes.entries()) {
+    await prisma.masterGlassType.upsert({
+      where: {
+        programVersion_sheetValue: {
+          programVersion: PROGRAM_VERSION,
+          sheetValue,
+        },
+      },
+      create: {
+        programVersion: PROGRAM_VERSION,
+        sheetValue,
+        displayName: sheetValue,
+        sortOrder: index + 1,
+      },
+      update: { displayName: sheetValue, sortOrder: index + 1 },
+    });
+  }
+
+  for (const [index, row] of insulationTypes.entries()) {
+    await upsertInsulationType(row, index + 1);
+  }
+
   for (const [index, sheetValue] of envelopeParts.entries()) {
     await prisma.masterEnvelopePart.upsert({
       where: {
@@ -237,7 +349,7 @@ async function main() {
   }
 
   console.log(
-    `seed 3.10: regions=${regions.length} modelBuildings=${modelNames.length} buildingUses=${buildingUses.length} frameTypes=${frameTypes.length} envelopeParts=${envelopeParts.length} orientations=${orientations.length} insulationInputMethods=${insulationInputMethods.length}`,
+    `seed 3.10: regions=${regions.length} modelBuildings=${modelNames.length} buildingUses=${buildingUses.length} frameTypes=${frameTypes.length} glassTypes=${glassTypes.length} insulationTypes=${insulationTypes.length} envelopeParts=${envelopeParts.length} orientations=${orientations.length} insulationInputMethods=${insulationInputMethods.length}`,
   );
 }
 

@@ -103,7 +103,11 @@ Prisma で `public` を管理。計画の `.sql` は移植元。
 
 ### DEC-18 — 断熱材マスタの一意と空の minor
 
-一意は `(program_version, sheet_value_major, sheet_value_minor)` のまま。minor が空の行の扱い（NULL か空文字か、大分類だけの行を持つか）は **B5 の seed で決める。** B2 時点ではスキーマを変えない。
+一意は `(program_version, sheet_value_major, sheet_value_minor)` のまま。**小分類が無い行は NULL**（空文字は使わない）。
+
+- 入力方法 A（大分類のみ）向け: 列 H の 14 大分類それぞれに `sheet_value_minor = NULL` の行を 1 件ずつ持つ（計 14 行）。
+- 入力方法 B 向け: 列 I の名前付き範囲どおり小分類 59 行。`sheet_value_major` は親の大分類文字列。
+- 熱伝導率 `thermal_conductivity` は Ver.3.10 の `data` 列に無いため seed では NULL。案件入力または後続版で埋める。
 
 ### DEC-19 — 用途とモデル建物の対応
 

@@ -126,7 +126,7 @@ seed の中身は [master-data.md](./master-data.md)。物理テーブル名は 
 
 `master_envelope_parts` / `master_orientations` は計画上 `display_name` が無い。UI 用に `display_name` を足すかは DEC-07（未決のまま列は足していない）。
 
-`master_insulation_types` の一意は `(program_version, sheet_value_major, sheet_value_minor)`。minor が空の行の扱いは B5 で決める（DEC-18）。
+`master_insulation_types` の一意は `(program_version, sheet_value_major, sheet_value_minor)`。小分類が無い行は **`sheet_value_minor` / `category_minor` を NULL**（DEC-18）。入力方法 A 用に大分類のみ 14 行 + 小分類 59 行 = seed 計 73 行。
 
 ## 7. RLS（最低限）
 
@@ -159,7 +159,7 @@ Fragments（`.frag`）をキャッシュする場合は別キー。DEC-06 で決
 2. マスタテーブルの Prisma モデル（B2 完了。seed なし）
 3. seed 骨格 + 地域・用途・モデル建物（B3 完了。`prisma/seed.ts`）
 4. 建具・方位・部位・断熱方法 seed（B4 完了）
-5. ガラス 156 + 断熱材（B5）
+5. ガラス 156 + 断熱材（B5 完了）
 6. `companies` / `profiles` + Auth トリガー SQL（B6）
 7. RLS ポリシー（B7）
 8. 案件・IFC・様式・計算結果は Phase C 以降
