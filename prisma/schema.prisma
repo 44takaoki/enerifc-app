@@ -89,6 +89,31 @@ enum ApiRunStatus {
   @@map("api_run_status")
 }
 
+// --- 認証連携（B6）。profiles.id → auth.users はマイグレーション SQL で FK を張る ---
+
+/// 会社名。登録時の find-or-create は API 側（C3）。
+model Company {
+  id        BigInt    @id @default(autoincrement())
+  name      String    @db.VarChar(255)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  profiles  Profile[]
+
+  @@map("companies")
+}
+
+/// アプリのユーザー行。id は auth.users(id) と同じ UUID。
+model Profile {
+  id          String    @id @db.Uuid
+  companyId   BigInt?   @map("company_id")
+  displayName String    @map("display_name") @db.VarChar(100)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  company     Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([companyId], map: "idx_profiles_company_id")
+  @@map("profiles")
+}
+
 // --- マスタ ---
 
 /// モデル建物法のプログラム版。他マスタの program_version がこれを参照する。

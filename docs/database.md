@@ -1,6 +1,6 @@
 # データベース（Prisma + Supabase）
 
-最終更新: 2026-08-23  
+最終更新: 2026-08-25  
 原典: `enerifc_DB_plannning/database/`（`DATABASE_DESIGN.md`, `schema.sql`, `supabase_auth.sql`）
 
 Prisma の `schema.prisma` がこの文書と食い違ったら、**意図的な変更は本 docs を先に直す。** 計画 SQL は履歴として残し、アプリの正は Prisma マイグレーションにする。
@@ -69,14 +69,18 @@ SQL の snake_case テーブル名を `@@map` で維持し、Prisma モデルは
 | `opening_input_method` | frame_and_glass, frame_and_glass_performance, window_performance |
 | `api_run_status` | pending, completed, error |
 
-### 4.3 Auth 外部キー
+### 4.3 Auth 外部キーとトリガー（B6 完了）
 
 `profiles.id` の `REFERENCES auth.users(id)` は Prisma だけでは書きにくい。手順:
 
-1. `profiles.id` を `Uuid @id` として Prisma に書く（Prisma 側の FK は無しでも可）。
-2. 同じマイグレーション、または直後の SQL で `auth.users` への FK とトリガーを追加する。
+1. `profiles.id` を `Uuid @id` として Prisma に書く（Prisma 側の FK は無し）。
+2. マイグレーション `20260825080000_add_companies_profiles_auth_trigger` の SQL で `auth.users` への FK と `handle_new_user` トリガーを追加する。
 
-会社は `company_id` 任意。登録時は会社名文字列から `companies` を find-or-create（API 側）。
+`prisma migrate dev` は検証用の **shadow database**（空の Postgres）を作る。そこには Supabase の `auth` スキーマが無い。そのため `auth.users` への FK / トリガーは `auth` が存在するときだけ実行する（P3006 回避）。本物の Supabase へ適用するときは付く。
+
+`handle_new_user` は `auth.users` INSERT 後に `profiles` を 1 行作る。`display_name` は `raw_user_meta_data.display_name`、無ければメールの `@` 前。
+
+会社は `company_id` 任意。登録時は会社名文字列から `companies` を find-or-create（API 側・C3）。**RLS は B7。**
 
 ### 4.4 計画 SQL との差分（意図）
 
@@ -160,6 +164,6 @@ Fragments（`.frag`）をキャッシュする場合は別キー。DEC-06 で決
 3. seed 骨格 + 地域・用途・モデル建物（B3 完了。`prisma/seed.ts`）
 4. 建具・方位・部位・断熱方法 seed（B4 完了）
 5. ガラス 156 + 断熱材（B5 完了）
-6. `companies` / `profiles` + Auth トリガー SQL（B6）
+6. `companies` / `profiles` + Auth トリガー SQL（B6 完了）
 7. RLS ポリシー（B7）
 8. 案件・IFC・様式・計算結果は Phase C 以降
