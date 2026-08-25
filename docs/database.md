@@ -158,8 +158,8 @@ Fragments（`.frag`）をキャッシュする場合は別キー。DEC-06 で決
 1. Prisma 初期化 + `master_program_versions` + enum（B1 完了。定義は `prisma/schema.prisma`）
 2. マスタテーブルの Prisma モデル（B2 完了。seed なし）
 3. seed 骨格 + 地域・用途・モデル建物（B3 完了。`prisma/seed.ts`）
-4. 残マスタ seed（建具・ガラス・断熱・方位・部位）
-4. `companies` / `profiles` + Auth トリガー SQL
-5. `projects` と RLS
-6. IFC・抽出・様式テーブル
-7. 計算結果・API ログ・問い合わせ
+4. 建具・方位・部位・断熱方法 seed（B4 完了）
+5. ガラス 156 + 断熱材（B5）
+6. `companies` / `profiles` + Auth トリガー SQL（B6）
+7. RLS ポリシー（B7）
+8. 案件・IFC・様式・計算結果は Phase C 以降

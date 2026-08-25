@@ -181,7 +181,7 @@ model MasterGlassType {
   @@map("master_glass_types")
 }
 
-/// 断熱の入力方法。method_code は seed で A〜E を振る（docs/master-data.md）。
+/// 断熱の入力方法。method_code は列 Y の並びどおり A〜E で固定（DEC-20）。
 model MasterInsulationInputMethod {
   id             BigInt                @id @default(autoincrement())
   programVersion String                @map("program_version") @db.VarChar(20)

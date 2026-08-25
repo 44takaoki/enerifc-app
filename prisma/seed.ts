@@ -8,6 +8,10 @@ const EXPECTED = {
   regions: 8,
   modelBuildings: 15,
   buildingUses: 15,
+  frameTypes: 14,
+  envelopeParts: 3,
+  orientations: 7,
+  insulationInputMethods: 5,
 } as const;
 
 const prisma = new PrismaClient();
@@ -28,6 +32,12 @@ async function main() {
   const buildingUses = loadJson<Array<{ use: string; model: string }>>(
     "building-uses.json",
   );
+  const frameTypes = loadJson<string[]>("frame-types.json");
+  const envelopeParts = loadJson<string[]>("envelope-parts.json");
+  const orientations = loadJson<string[]>("orientations.json");
+  const insulationInputMethods = loadJson<
+    Array<{ methodCode: string; sheetValue: string }>
+  >("insulation-input-methods.json");
 
   if (regions.length !== EXPECTED.regions) {
     throw new Error(
@@ -42,6 +52,26 @@ async function main() {
   if (buildingUses.length !== EXPECTED.buildingUses) {
     throw new Error(
       `building-uses.json は ${EXPECTED.buildingUses} 件であるべき。実際: ${buildingUses.length}`,
+    );
+  }
+  if (frameTypes.length !== EXPECTED.frameTypes) {
+    throw new Error(
+      `frame-types.json は ${EXPECTED.frameTypes} 件であるべき。実際: ${frameTypes.length}`,
+    );
+  }
+  if (envelopeParts.length !== EXPECTED.envelopeParts) {
+    throw new Error(
+      `envelope-parts.json は ${EXPECTED.envelopeParts} 件であるべき。実際: ${envelopeParts.length}`,
+    );
+  }
+  if (orientations.length !== EXPECTED.orientations) {
+    throw new Error(
+      `orientations.json は ${EXPECTED.orientations} 件であるべき。実際: ${orientations.length}`,
+    );
+  }
+  if (insulationInputMethods.length !== EXPECTED.insulationInputMethods) {
+    throw new Error(
+      `insulation-input-methods.json は ${EXPECTED.insulationInputMethods} 件であるべき。実際: ${insulationInputMethods.length}`,
     );
   }
 
@@ -131,8 +161,83 @@ async function main() {
     });
   }
 
+  for (const [index, sheetValue] of frameTypes.entries()) {
+    await prisma.masterFrameType.upsert({
+      where: {
+        programVersion_sheetValue: {
+          programVersion: PROGRAM_VERSION,
+          sheetValue,
+        },
+      },
+      create: {
+        programVersion: PROGRAM_VERSION,
+        sheetValue,
+        displayName: sheetValue,
+        sortOrder: index + 1,
+      },
+      update: { displayName: sheetValue, sortOrder: index + 1 },
+    });
+  }
+
+  for (const [index, sheetValue] of envelopeParts.entries()) {
+    await prisma.masterEnvelopePart.upsert({
+      where: {
+        programVersion_sheetValue: {
+          programVersion: PROGRAM_VERSION,
+          sheetValue,
+        },
+      },
+      create: {
+        programVersion: PROGRAM_VERSION,
+        sheetValue,
+        sortOrder: index + 1,
+      },
+      update: { sortOrder: index + 1 },
+    });
+  }
+
+  for (const [index, sheetValue] of orientations.entries()) {
+    await prisma.masterOrientation.upsert({
+      where: {
+        programVersion_sheetValue: {
+          programVersion: PROGRAM_VERSION,
+          sheetValue,
+        },
+      },
+      create: {
+        programVersion: PROGRAM_VERSION,
+        sheetValue,
+        sortOrder: index + 1,
+      },
+      update: { sortOrder: index + 1 },
+    });
+  }
+
+  for (const [index, row] of insulationInputMethods.entries()) {
+    await prisma.masterInsulationInputMethod.upsert({
+      where: {
+        programVersion_methodCode: {
+          programVersion: PROGRAM_VERSION,
+          methodCode: row.methodCode,
+        },
+      },
+      create: {
+        programVersion: PROGRAM_VERSION,
+        methodCode: row.methodCode,
+        sheetValue: row.sheetValue,
+        displayName: row.sheetValue,
+        sortOrder: index + 1,
+      },
+      update: {
+        sheetValue: row.sheetValue,
+        displayName: row.sheetValue,
+        sortOrder: index + 1,
+      },
+    });
+  }
+
   console.log(
-    `seed 3.10: regions=${regions.length} modelBuildings=${modelNames.length} buildingUses=${buildingUses.length}`,
+    `seed 3.10: regions=${regions.length} modelBuildings=${modelNames.length} buildingUses=${buildingUses.length} frameTypes=${frameTypes.length} envelopeParts=${envelopeParts.length} orientations=${orientations.length} insulationInputMethods=${insulationInputMethods.length}`,
   );
 }
 
