@@ -1,6 +1,6 @@
 # データベース（Prisma + Supabase）
 
-最終更新: 2026-08-25  
+最終更新: 2026-08-26  
 原典: `enerifc_DB_plannning/database/`（`DATABASE_DESIGN.md`, `schema.sql`, `supabase_auth.sql`）
 
 Prisma の `schema.prisma` がこの文書と食い違ったら、**意図的な変更は本 docs を先に直す。** 計画 SQL は履歴として残し、アプリの正は Prisma マイグレーションにする。
@@ -76,11 +76,13 @@ SQL の snake_case テーブル名を `@@map` で維持し、Prisma モデルは
 1. `profiles.id` を `Uuid @id` として Prisma に書く（Prisma 側の FK は無し）。
 2. マイグレーション `20260825080000_add_companies_profiles_auth_trigger` の SQL で `auth.users` への FK と `handle_new_user` トリガーを追加する。
 
-`prisma migrate dev` は検証用の **shadow database**（空の Postgres）を作る。そこには Supabase の `auth` スキーマが無い。そのため `auth.users` への FK / トリガーは `auth` が存在するときだけ実行する（P3006 回避）。本物の Supabase へ適用するときは付く。
+`prisma migrate dev` は検証用の **shadow database**（空の Postgres）を作る。そこには Supabase の `auth` スキーマが無い。
+
+P4002 対策（DEC-21）: datasource に `schemas = ["public", "auth"]` を書く。`auth.users` の DDL は Prisma に任せない（`prisma.config.ts` の externalTables）。影DBには `initShadowDb` で `auth.users(id)` の箱だけ作るので、B6 の FK は影DBでも張れる。
 
 `handle_new_user` は `auth.users` INSERT 後に `profiles` を 1 行作る。`display_name` は `raw_user_meta_data.display_name`、無ければメールの `@` 前。
 
-会社は `company_id` 任意。登録時は会社名文字列から `companies` を find-or-create（API 側・C3）。**RLS は B7。**
+会社は `company_id` 任意。登録時は会社名文字列から `companies` を find-or-create（API 側・C3）。
 
 ### 4.4 計画 SQL との差分（意図）
 
@@ -132,19 +134,28 @@ seed の中身は [master-data.md](./master-data.md)。物理テーブル名は 
 
 `master_insulation_types` の一意は `(program_version, sheet_value_major, sheet_value_minor)`。小分類が無い行は **`sheet_value_minor` / `category_minor` を NULL**（DEC-18）。入力方法 A 用に大分類のみ 14 行 + 小分類 59 行 = seed 計 73 行。
 
-## 7. RLS（最低限）
+## 7. RLS
 
-計画 `supabase_auth.sql` をベースに、MVP で次を満たす。
+計画 `supabase_auth.sql` をベースに、Prisma マイグレーションの raw SQL で張る。Prisma 接続（テーブル所有者）は RLS をバイパスする。POLICY は `authenticated` の直アクセスと将来のクライアント用。`FORCE ROW LEVEL SECURITY` は付けない（seed と Auth トリガーのため）。
 
-- `profiles`: 自分の行のみ SELECT/UPDATE
+### B7 で入れたもの（`20260825120000_add_rls_profiles_companies_masters`）
+
+| テーブル | 認証済みに許すこと |
+|----------|-------------------|
+| `profiles` | 自分の行の SELECT / UPDATE（`auth.uid() = id`）。INSERT は `handle_new_user` のみ |
+| `companies` | SELECT と INSERT。UPDATE / DELETE は無し（他人の会社行を改ざんできない） |
+| 全 `master_*` | SELECT のみ |
+
+未ログイン（`anon`）は GRANT しないので読めない。
+
+### テーブルができてから（Phase C 以降）
+
 - `projects`: `user_id = auth.uid()`。削除は論理削除でも所有者のみ
 - 案件の子すべて: `EXISTS (projects.user_id = auth.uid())`
 - `model_building_api_runs`: 計算結果 → 案件の所有者
 - `contact_inquiries`: 挿入は認証済み。自分の送信分だけ読める
-- `companies`: 所属更新に必要な範囲。MVP は「認証済みが名前で作成可」でもよいが、他人の会社行の改ざんは不可
-- `master_*`: `authenticated` の SELECT のみ
 
-Prisma 用ロールが RLS を無視する場合でも POLICY は張る（Storage や将来のクライアント直アクセス）。
+Prisma 用ロールが RLS を無視する場合でも、アプリケーションの `where` は省略しない（[architecture.md](./architecture.md) 4 節）。
 
 ## 8. Storage
 
@@ -165,5 +176,5 @@ Fragments（`.frag`）をキャッシュする場合は別キー。DEC-06 で決
 4. 建具・方位・部位・断熱方法 seed（B4 完了）
 5. ガラス 156 + 断熱材（B5 完了）
 6. `companies` / `profiles` + Auth トリガー SQL（B6 完了）
-7. RLS ポリシー（B7）
+7. RLS ポリシー（B7 完了。profiles / companies / master_*）
 8. 案件・IFC・様式・計算結果は Phase C 以降

@@ -1,6 +1,6 @@
 # 技術スタック
 
-最終更新: 2026-08-23  
+最終更新: 2026-08-26  
 関連: [architecture.md](./architecture.md) / [decisions.md](./decisions.md)
 
 ## 1. 採用スタック（確定）
@@ -82,12 +82,13 @@ That Open は Three.js / fragments / web-ifc を peer として要求する。**
 |------|------|
 | メール／パスワード／セッション／JWT | Supabase Auth |
 | `public` テーブル定義・FK・enum | Prisma schema → マイグレーション |
+| `auth` スキーマ（users 等） | Supabase 管理。Prisma は FK のために名前だけ知る（DEC-21）。DDL しない |
 | サインアップ時の `profiles` 作成 | DB トリガー（計画の `supabase_auth.sql` 相当。Prisma の SQL マイグレーションで入れる） |
 | RLS | SQL マイグレーション。Prisma はバイパスしうるので **サーバで必ず所有者チェック** |
 | IFC バイナリ | Supabase Storage。DB にはパスのみ |
 | マスタ投入 | Prisma seed。原典は Ver.3.10 シート |
 
-Prisma から `auth.users` を直接モデル化しない。`profiles.id` は UUID で、マイグレーション SQL により `auth.users(id)` を参照する。
+Prisma から `auth.users` の列を業務で読まない。`profiles.id` は UUID で、`AuthUser` モデルは FK 用の最小定義。マイグレーション SQL が `auth.users(id)` を参照する。
 
 ## 6. Next.js の使い方（このリポジトリ）
 
@@ -97,7 +98,7 @@ Prisma から `auth.users` を直接モデル化しない。`profiles.id` は UU
 |------|----------|
 | ページ | `app/`（App Router） |
 | API | `app/api/` の Route Handler、または Server Actions |
-| Prisma | `prisma/schema.prisma` |
+| Prisma | `prisma/schema.prisma` + `prisma.config.ts`（Auth 外部テーブル） |
 | ドメインロジック | `src/` または `lib/`（実装時に決めて [architecture.md](./architecture.md) を更新） |
 | ビューア | Client Component のみ。WASM / Worker は public または bundler 設定 |
 

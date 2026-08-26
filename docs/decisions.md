@@ -1,6 +1,6 @@
 # 決定ログと未決事項
 
-最終更新: 2026-08-25
+最終更新: 2026-08-26
 
 番号は参照用。決まったら「状態」を確定にし、本文に結論を書く。実装は確定後に進める（スパイク除く）。
 
@@ -83,7 +83,7 @@ MVP のマスタは入力シート Ver.3.10。`program_version = 3.10`。
 
 ### DEC-14 — ORM
 
-Prisma で `public` を管理。計画の `.sql` は移植元。
+Prisma 6 で `public` の DDL を管理。計画の `.sql` は移植元。`auth` は schemas に載せるがテーブル定義は触らない（DEC-21）。
 
 ### DEC-15 — 実装順
 
@@ -116,3 +116,14 @@ MVP の Ver.3.10 seed は 1:1（入力シート列 C がモデル名のため）
 ### DEC-20 — 断熱入力方法の method_code
 
 シート列 Y にはコードが無い。並びどおり **A〜E を固定**する（`docs/master-data.md`）。API と様式の参照はこの 1 文字を使う。
+
+### DEC-21 — Prisma と auth スキーマ（P4002）
+
+`profiles.id` → `auth.users(id)` の FK を Prisma が検査するには、datasource の `schemas` に `auth` が必要。ただし **Auth の DDL は Prisma に任せない。**
+
+- `prisma/schema.prisma`: `schemas = ["public", "auth"]`。アプリのモデルは `@@schema("public")`
+- `AuthUser` は FK のため `id` だけ持つ。業務コードからは使わない
+- `prisma.config.ts`: `tables.external` / `enums.external` に Supabase Auth の表を列挙
+- 影DB用に `initShadowDb` で `auth.users` の箱と `authenticated` ロールだけ用意する
+
+`npm run db:migrate` が `auth.*` を DROP しようとする差分を出したら、足りない名前を `prisma.config.ts` に足す。Prisma 7 へは上げない。

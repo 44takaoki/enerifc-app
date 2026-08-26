@@ -1,6 +1,6 @@
 // Enerifc の public スキーマ定義。方針は docs/database.md。
-// B1: enum + プログラム版。B2: 残りの master_*（seed は B3 以降）。
 // Prisma CLI は 6.x（datasource に url を書く）。拡張機能が 7 系だと警告が出ることがある。
+// auth は schemas に載せるが DDL はしない（prisma.config.ts の externalTables / DEC-21）。
 
 generator client {
   provider = "prisma-client-js"
@@ -11,6 +11,7 @@ datasource db {
   url       = env("DATABASE_URL")
   // Supabase はマイグレーションを Direct 接続（DIRECT_URL）で実行する
   directUrl = env("DIRECT_URL")
+  schemas   = ["public", "auth"]
 }
 
 // --- PostgreSQL enum（docs/database.md 4.2） ---
@@ -24,6 +25,7 @@ enum ProjectStatus {
   failed
 
   @@map("project_status")
+  @@schema("public")
 }
 
 enum CalculationResultStatus {
@@ -33,6 +35,7 @@ enum CalculationResultStatus {
   failed
 
   @@map("calculation_result_status")
+  @@schema("public")
 }
 
 enum OverallGoalStatus {
@@ -40,6 +43,7 @@ enum OverallGoalStatus {
   not_achieved
 
   @@map("overall_goal_status")
+  @@schema("public")
 }
 
 enum DataSource {
@@ -47,6 +51,7 @@ enum DataSource {
   manual
 
   @@map("data_source")
+  @@schema("public")
 }
 
 enum ExtractionStatus {
@@ -56,6 +61,7 @@ enum ExtractionStatus {
   failed
 
   @@map("extraction_status")
+  @@schema("public")
 }
 
 enum IfcElementKind {
@@ -71,6 +77,7 @@ enum IfcElementKind {
   other
 
   @@map("ifc_element_kind")
+  @@schema("public")
 }
 
 enum OpeningInputMethod {
@@ -79,6 +86,7 @@ enum OpeningInputMethod {
   window_performance
 
   @@map("opening_input_method")
+  @@schema("public")
 }
 
 enum ApiRunStatus {
@@ -87,9 +95,19 @@ enum ApiRunStatus {
   error
 
   @@map("api_run_status")
+  @@schema("public")
 }
 
-// --- 認証連携（B6）。profiles.id → auth.users はマイグレーション SQL で FK を張る ---
+// --- 認証連携（B6）。auth.users は Prisma が DDL しない（DEC-21） ---
+
+/// Supabase Auth の users。列は id だけ書く（外部テーブル）。アプリの業務コードからは使わない。
+model AuthUser {
+  id      String   @id @db.Uuid
+  profile Profile?
+
+  @@map("users")
+  @@schema("auth")
+}
 
 /// 会社名。登録時の find-or-create は API 側（C3）。
 model Company {
@@ -99,6 +117,7 @@ model Company {
   profiles  Profile[]
 
   @@map("companies")
+  @@schema("public")
 }
 
 /// アプリのユーザー行。id は auth.users(id) と同じ UUID。
@@ -109,9 +128,11 @@ model Profile {
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   company     Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  authUser    AuthUser  @relation(fields: [id], references: [id], onDelete: Cascade)
 
   @@index([companyId], map: "idx_profiles_company_id")
   @@map("profiles")
+  @@schema("public")
 }
 
 // --- マスタ ---
@@ -134,6 +155,7 @@ model MasterProgramVersion {
   orientations             MasterOrientation[]
 
   @@map("master_program_versions")
+  @@schema("public")
 }
 
 /// 地域区分（様式 A）。sheet_value は入力シートの表記（例: 6地域）。
@@ -143,10 +165,11 @@ model MasterRegionCategory {
   sheetValue     String                @map("sheet_value") @db.VarChar(100)
   displayName    String                @map("display_name") @db.VarChar(100)
   sortOrder      Int                   @default(0) @map("sort_order")
-  program        MasterProgramVersion  @relation(fields: [programVersion], references: [version])
+  program        MasterProgramVersion  @relation(fields: [programVersion], references: [version], onDelete: Restrict)
 
   @@unique([programVersion, sheetValue])
   @@map("master_region_categories")
+  @@schema("public")
 }
 
 /// 国定モデル建物。BEIm 注記は description。用途から参照される。
@@ -157,11 +180,12 @@ model MasterModelBuilding {
   displayName    String                @map("display_name") @db.VarChar(100)
   description    String?
   sortOrder      Int                   @default(0) @map("sort_order")
-  program        MasterProgramVersion  @relation(fields: [programVersion], references: [version])
+  program        MasterProgramVersion  @relation(fields: [programVersion], references: [version], onDelete: Restrict)
   buildingUses   MasterBuildingUse[]
 
   @@unique([programVersion, sheetValue])
   @@map("master_model_buildings")
+  @@schema("public")
 }
 
 /// 建物用途。model_building_id で国定モデルが決まる。
@@ -172,12 +196,13 @@ model MasterBuildingUse {
   displayName     String               @map("display_name") @db.VarChar(200)
   modelBuildingId BigInt               @map("model_building_id")
   sortOrder       Int                  @default(0) @map("sort_order")
-  program         MasterProgramVersion @relation(fields: [programVersion], references: [version])
-  modelBuilding   MasterModelBuilding  @relation(fields: [modelBuildingId], references: [id])
+  program         MasterProgramVersion @relation(fields: [programVersion], references: [version], onDelete: Restrict)
+  modelBuilding   MasterModelBuilding  @relation(fields: [modelBuildingId], references: [id], onDelete: Restrict)
 
   @@unique([programVersion, sheetValue])
   @@index([modelBuildingId], map: "idx_master_building_uses_model")
   @@map("master_building_uses")
+  @@schema("public")
 }
 
 /// 建具種別（様式 B1）。
@@ -187,10 +212,11 @@ model MasterFrameType {
   sheetValue     String                @map("sheet_value") @db.VarChar(100)
   displayName    String?               @map("display_name") @db.VarChar(255)
   sortOrder      Int                   @default(0) @map("sort_order")
-  program        MasterProgramVersion  @relation(fields: [programVersion], references: [version])
+  program        MasterProgramVersion  @relation(fields: [programVersion], references: [version], onDelete: Restrict)
 
   @@unique([programVersion, sheetValue])
   @@map("master_frame_types")
+  @@schema("public")
 }
 
 /// ガラス符号（様式 B1）。sheet_value は 3WgG06 形式。
@@ -200,10 +226,11 @@ model MasterGlassType {
   sheetValue     String                @map("sheet_value") @db.VarChar(20)
   displayName    String?               @map("display_name") @db.VarChar(255)
   sortOrder      Int                   @default(0) @map("sort_order")
-  program        MasterProgramVersion  @relation(fields: [programVersion], references: [version])
+  program        MasterProgramVersion  @relation(fields: [programVersion], references: [version], onDelete: Restrict)
 
   @@unique([programVersion, sheetValue])
   @@map("master_glass_types")
+  @@schema("public")
 }
 
 /// 断熱の入力方法。method_code は列 Y の並びどおり A〜E で固定（DEC-20）。
@@ -214,10 +241,11 @@ model MasterInsulationInputMethod {
   sheetValue     String                @map("sheet_value") @db.VarChar(50)
   displayName    String                @map("display_name") @db.VarChar(100)
   sortOrder      Int                   @default(0) @map("sort_order")
-  program        MasterProgramVersion  @relation(fields: [programVersion], references: [version])
+  program        MasterProgramVersion  @relation(fields: [programVersion], references: [version], onDelete: Restrict)
 
   @@unique([programVersion, methodCode])
   @@map("master_insulation_input_methods")
+  @@schema("public")
 }
 
 /// 断熱材。大分類 + 小分類。熱伝導率は小分類側に持つ。
@@ -230,10 +258,11 @@ model MasterInsulationType {
   sheetValueMajor      String               @map("sheet_value_major") @db.VarChar(100)
   sheetValueMinor      String?              @map("sheet_value_minor") @db.VarChar(100)
   sortOrder            Int                  @default(0) @map("sort_order")
-  program              MasterProgramVersion @relation(fields: [programVersion], references: [version])
+  program              MasterProgramVersion @relation(fields: [programVersion], references: [version], onDelete: Restrict)
 
   @@unique([programVersion, sheetValueMajor, sheetValueMinor], map: "master_insulation_types_version_major_minor_key")
   @@map("master_insulation_types")
+  @@schema("public")
 }
 
 /// 外皮部位。display_name は DEC-07 が未決のため持たない。
@@ -242,10 +271,11 @@ model MasterEnvelopePart {
   programVersion String                @map("program_version") @db.VarChar(20)
   sheetValue     String                @map("sheet_value") @db.VarChar(50)
   sortOrder      Int                   @default(0) @map("sort_order")
-  program        MasterProgramVersion  @relation(fields: [programVersion], references: [version])
+  program        MasterProgramVersion  @relation(fields: [programVersion], references: [version], onDelete: Restrict)
 
   @@unique([programVersion, sheetValue])
   @@map("master_envelope_parts")
+  @@schema("public")
 }
 
 /// 方位。開口「なし」と外皮「屋根」「床」を同一テーブルに持つ（docs/master-data.md）。
@@ -254,8 +284,9 @@ model MasterOrientation {
   programVersion String                @map("program_version") @db.VarChar(20)
   sheetValue     String                @map("sheet_value") @db.VarChar(20)
   sortOrder      Int                   @default(0) @map("sort_order")
-  program        MasterProgramVersion  @relation(fields: [programVersion], references: [version])
+  program        MasterProgramVersion  @relation(fields: [programVersion], references: [version], onDelete: Restrict)
 
   @@unique([programVersion, sheetValue])
   @@map("master_orientations")
+  @@schema("public")
 }

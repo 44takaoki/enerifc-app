@@ -1,7 +1,7 @@
 # 進捗とフェーズ
 
-最終更新: 2026-08-25  
-ステータス: **B6 完了。次は B7（RLS ポリシー）。**
+最終更新: 2026-08-26  
+ステータス: **B7 完了。Phase B 終了。次は C1（セッション取得）。**
 
 レビューは 1 回あたり差分 1000 行以内。[development-guide.md](./development-guide.md) 参照。
 
@@ -34,9 +34,9 @@
 | B4 | 建具・方位・部位・断熱方法 seed | JSON + seed.ts | 中・完了 |
 | B5 | ガラス 156 + 断熱材（親子） | JSON + seed.ts | 中・完了 |
 | B6 | companies / profiles + Auth トリガー SQL | Prisma + migrate | 中・完了 |
-| B7 | RLS ポリシー（プロフィールとマスタ） | SQL マイグレーション | 小〜中 |
+| B7 | RLS ポリシー（プロフィールとマスタ） | SQL マイグレーション | 小〜中・完了 |
 
-**次にやる推奨: B7。** DEC-01（React/Lit）はビューアまで確定しなくてよい。
+**次にやる推奨: C1。** DEC-01（React/Lit）はビューアまで確定しなくてよい。
 
 外部講師への依頼は B2 では出さない（DEC-16）。実装は B7 まで進め、**提出は B1〜B7 を 1 本にまとめる。** 1000 行超過時は依頼文で講師に伝える。
 
@@ -89,7 +89,8 @@ DEC-01 を確認してから。
 
 ## 今のリポジトリ状態
 
-- Prisma 導入済み。enum、`master_*` 定義、B3〜B5 seed、`companies` / `profiles` + Auth トリガー（B6）
+- Prisma 導入済み。enum、`master_*` 定義、B3〜B5 seed、`companies` / `profiles` + Auth トリガー（B6）、RLS（B7）
+- `auth` は Prisma の schemas に載せるが DDL しない（DEC-21 / `prisma.config.ts`）
 - 投入: migrate 後に `npm run db:seed`
 - 画面・That Open は未着手
 - 計画 SQL はリポジトリ外 `enerifc_DB_plannning`
