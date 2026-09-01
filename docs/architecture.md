@@ -119,6 +119,22 @@ export async function GET() {
 
 確認用: `GET /api/me`（ログイン済み Cookie があれば `{ userId }`、無ければ 401）。
 
+### 4.2 案件 API（C2）
+
+Route Handler（REST）。入口は薄く、ユースケースは `lib/projects/service.ts`。
+
+| メソッド | パス | 説明 |
+|----------|------|------|
+| `GET` | `/api/projects` | 一覧。`?q=` 名前、`?status=` で絞り込み |
+| `POST` | `/api/projects` | 作成。body `{ name }`。既定 `status=draft`, `programVersion=3.10` |
+| `GET` | `/api/projects/[projectId]` | 1 件取得 |
+| `PATCH` | `/api/projects/[projectId]` | 更新。`name` / `status` |
+| `DELETE` | `/api/projects/[projectId]` | 論理削除（204） |
+
+認可: `requireUserId()` + Prisma の `where: { userId, deletedAt: null }`。RLS は `projects_all_own`（`auth.uid() = user_id`）。
+
+レスポンスの `id` は BigInt を文字列化（JSON の精度対策）。
+
 ## 5. モジュール境界（実装時の目標）
 
 名前は実装で多少変えてよい。責務は固定する。
