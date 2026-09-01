@@ -1,6 +1,6 @@
 # アーキテクチャ
 
-最終更新: 2026-08-23
+最終更新: 2026-09-01
 
 ## 1. 全体像
 
@@ -79,12 +79,45 @@ createProject(name, ifc)
 
 ## 4. 認可
 
-- セッション: `@supabase/ssr` で Cookie。
-- サーバ: `auth.uid()` 相当の UUID を取り、`projects.user_id` と照合してから Prisma する。
+- セッション: `@supabase/ssr` で Cookie（`middleware.ts` が JWT を更新）。
+- サーバ: `lib/auth/session.ts` の `getUserId()` / `requireUserId()`。`profiles.id` と同じ UUID。
 - RLS: 同趣旨の POLICY を DB にも置く（クライアントや将来の直アクセス用）。
 - マスタ: 認証済み読み取り。更新は seed / 管理者作業のみ（MVP に管理画面は無い）。
 
 Prisma の DB ユーザーが RLS をバイパスする場合でも、**アプリケーションの where を省略しない。**
+
+### 4.1 セッション取得（C1）
+
+| ファイル | 用途 |
+|----------|------|
+| `lib/auth/env.ts` | `NEXT_PUBLIC_SUPABASE_*` の検証 |
+| `lib/auth/server.ts` | サーバ用 Supabase クライアント |
+| `lib/auth/client.ts` | ブラウザ用（ログイン画面など） |
+| `lib/auth/session.ts` | `getAuthUser` / `getUserId` / `requireUserId` |
+| `lib/auth/http.ts` | Route Handler の 401 応答 |
+| `middleware.ts` | Cookie のセッション更新 |
+
+サーバでは **`getSession()` ではなく `getUser()`** を使う（JWT を Supabase に検証させる）。
+
+Route Handler の例:
+
+```typescript
+import { requireUserId } from "@/lib/auth/session";
+import { isUnauthorizedError, unauthorizedJsonResponse } from "@/lib/auth/http";
+
+export async function GET() {
+  try {
+    const userId = await requireUserId();
+    // Prisma では必ず where: { userId } 等を付ける
+    return Response.json({ userId });
+  } catch (error) {
+    if (isUnauthorizedError(error)) return unauthorizedJsonResponse();
+    throw error;
+  }
+}
+```
+
+確認用: `GET /api/me`（ログイン済み Cookie があれば `{ userId }`、無ければ 401）。
 
 ## 5. モジュール境界（実装時の目標）
 
