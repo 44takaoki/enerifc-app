@@ -1,0 +1,7 @@
+[
+  { "methodCode": "A", "sheetValue": "断熱材の種類(大分類のみ)と厚みを入力する" },
+  { "methodCode": "B", "sheetValue": "断熱材の種類と厚みを入力する" },
+  { "methodCode": "C", "sheetValue": "熱伝導率と厚みを入力する" },
+  { "methodCode": "D", "sheetValue": "熱貫流率を入力する" },
+  { "methodCode": "E", "sheetValue": "入力しない" }
+]
