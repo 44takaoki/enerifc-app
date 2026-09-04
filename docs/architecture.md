@@ -146,6 +146,14 @@ Route Handler（REST）。入口は薄く、ユースケースは `lib/projects/
 
 `companyName` を `null` または `""` にすると会社紐づけを外す。会社の UPDATE / DELETE は RLS 上付けていない（B7）。新規行の INSERT のみ `authenticated` 可。
 
+### 4.4 お問い合わせ API（C4）
+
+| メソッド | パス | 説明 |
+|----------|------|------|
+| `POST` | `/api/contact-inquiries` | 送信。body `{ name, companyName?, email, content }` |
+
+未ログインでも POST 可（CTL-02）。ログイン済み Cookie があれば `user_id` を付与（CTL-01）。RLS は認証済み INSERT と自分の行 SELECT のみ。未ログイン送信は Next.js API（Prisma）経由。
+
 ## 5. モジュール境界（実装時の目標）
 
 名前は実装で多少変えてよい。責務は固定する。
@@ -158,6 +166,7 @@ lib/db/              Prisma client 単例
 lib/projects/        案件ユースケース
 lib/companies/       会社 find-or-create
 lib/profile/         プロフィール取得・更新
+lib/contact-inquiries/  お問い合わせ送信
 lib/extraction/      IFC 抽出の DTO とバリデーション
 lib/calculation/     API クライアントとレスポンスパース
 lib/masters/         マスタ参照

@@ -105,6 +105,8 @@ P4002 対策（DEC-21）: datasource に `schemas = ["public", "auth"]` を書�
 
 詳細な全列は計画 ER を正とし、Prisma 化時にこの節を「Prisma 準拠」に書き換える。
 
+**contact_inquiries:** `user_id`, `name`, `company_name`, `email`, `content`, `created_at`
+
 **projects:** `user_id`, `name`, `status`, `program_version`, `total_floor_area`, `deleted_at`
 
 **project_basic_info:** `building_name`, `region_category_id`, `building_use_id`, `total_floor_area_m2`, `data_source`, `is_confirmed`
@@ -154,11 +156,18 @@ seed の中身は [master-data.md](./master-data.md)。物理テーブル名は 
 |----------|-------------------|
 | `projects` | 自分の行の ALL（`auth.uid() = user_id`）。論理削除は UPDATE |
 
-### これから（Phase C / D 以降）
+### C4 で入れたもの（`20260904150000_add_contact_inquiries_table_and_rls`）
+
+| テーブル | 認証済みに許すこと |
+|----------|-------------------|
+| `contact_inquiries` | INSERT（`user_id` は NULL または自分）。SELECT は `user_id = auth.uid()` の行のみ |
+
+未ログイン送信は Route Handler（Prisma）経由。`user_id` が NULL の行は Supabase 直アクセスでは読めない。
+
+### これから（Phase D 以降）
 
 - 案件の子すべて: `EXISTS (projects.user_id = auth.uid())`
 - `model_building_api_runs`: 計算結果 → 案件の所有者
-- `contact_inquiries`: 挿入は認証済み。自分の送信分だけ読める
 
 Prisma 用ロールが RLS を無視する場合でも、アプリケーションの `where` は省略しない（[architecture.md](./architecture.md) 4 節）。
 

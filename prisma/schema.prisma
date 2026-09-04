@@ -130,6 +130,7 @@ model Profile {
   company     Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
   authUser    AuthUser  @relation(fields: [id], references: [id], onDelete: Cascade)
   projects    Project[]
+  contactInquiries ContactInquiry[]
 
   @@index([companyId], map: "idx_profiles_company_id")
   @@map("profiles")
@@ -155,6 +156,24 @@ model Project {
   @@index([userId], map: "idx_projects_user_id")
   @@index([status], map: "idx_projects_status")
   @@map("projects")
+  @@schema("public")
+}
+
+// --- お問い合わせ（C4） ---
+
+/// お問い合わせフォーム送信。未ログインは user_id NULL（CTL-02）。
+model ContactInquiry {
+  id          BigInt    @id @default(autoincrement())
+  userId      String?   @map("user_id") @db.Uuid
+  name        String    @db.VarChar(100)
+  companyName String?   @map("company_name") @db.VarChar(255)
+  email       String    @db.VarChar(255)
+  content     String    @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  user        Profile?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId], map: "idx_contact_inquiries_user_id")
+  @@map("contact_inquiries")
   @@schema("public")
 }
 
