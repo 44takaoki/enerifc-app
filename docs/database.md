@@ -82,7 +82,7 @@ P4002 対策（DEC-21）: datasource に `schemas = ["public", "auth"]` を書�
 
 `handle_new_user` は `auth.users` INSERT 後に `profiles` を 1 行作る。`display_name` は `raw_user_meta_data.display_name`、無ければメールの `@` 前。`updated_at` も同時に入れる（`20260901110000_fix_handle_new_user_updated_at`）。
 
-会社は `company_id` 任意。登録時は会社名文字列から `companies` を find-or-create（API 側・C3）。
+会社は `company_id` 任意。登録時は会社名文字列から `companies` を find-or-create（C3: `POST /api/companies` または `PATCH /api/profile` の `companyName`）。
 
 ### 4.4 計画 SQL との差分（意図）
 

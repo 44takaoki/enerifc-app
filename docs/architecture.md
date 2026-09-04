@@ -135,6 +135,17 @@ Route Handler（REST）。入口は薄く、ユースケースは `lib/projects/
 
 レスポンスの `id` は BigInt を文字列化（JSON の精度対策）。
 
+### 4.3 プロフィール・会社 API（C3）
+
+| メソッド | パス | 説明 |
+|----------|------|------|
+| `GET` | `/api/profile` | 自分のプロフィール（`displayName`, `company`, `email`） |
+| `PATCH` | `/api/profile` | 更新。`displayName` / `companyName`（find-or-create して `profiles.company_id` を設定） |
+| `GET` | `/api/companies` | 会社名検索。`?q=` 部分一致（最大 20 件） |
+| `POST` | `/api/companies` | 名前で find-or-create。body `{ name }` |
+
+`companyName` を `null` または `""` にすると会社紐づけを外す。会社の UPDATE / DELETE は RLS 上付けていない（B7）。新規行の INSERT のみ `authenticated` 可。
+
 ## 5. モジュール境界（実装時の目標）
 
 名前は実装で多少変えてよい。責務は固定する。
@@ -145,6 +156,8 @@ app/api/             HTTP の入口（薄い）
 lib/auth/            セッション取得
 lib/db/              Prisma client 単例
 lib/projects/        案件ユースケース
+lib/companies/       会社 find-or-create
+lib/profile/         プロフィール取得・更新
 lib/extraction/      IFC 抽出の DTO とバリデーション
 lib/calculation/     API クライアントとレスポンスパース
 lib/masters/         マスタ参照
