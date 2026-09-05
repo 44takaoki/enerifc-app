@@ -1,4 +1,4 @@
-# データベース（Prisma + Supabase）
+﻿# データベース（Prisma + Supabase）
 
 最終更新: 2026-08-26  
 原典: `enerifc_DB_plannning/database/`（`DATABASE_DESIGN.md`, `schema.sql`, `supabase_auth.sql`）
@@ -80,9 +80,9 @@ SQL の snake_case テーブル名を `@@map` で維持し、Prisma モデルは
 
 P4002 対策（DEC-21）: datasource に `schemas = ["public", "auth"]` を書く。`auth.users` の DDL は Prisma に任せない（`prisma.config.ts` の externalTables）。影DBには `initShadowDb` で `auth.users(id)` の箱だけ作るので、B6 の FK は影DBでも張れる。
 
-`handle_new_user` は `auth.users` INSERT 後に `profiles` を 1 行作る。`display_name` は `raw_user_meta_data.display_name`、無ければメールの `@` 前。
+`handle_new_user` は `auth.users` INSERT 後に `profiles` を 1 行作る。`display_name` は `raw_user_meta_data.display_name`、無ければメールの `@` 前。`updated_at` も同時に入れる（`20260901110000_fix_handle_new_user_updated_at`）。
 
-会社は `company_id` 任意。登録時は会社名文字列から `companies` を find-or-create（API 側・C3）。
+会社は `company_id` 任意。登録時は会社名文字列から `companies` を find-or-create（C3: `POST /api/companies` または `PATCH /api/profile` の `companyName`）。
 
 ### 4.4 計画 SQL との差分（意図）
 
@@ -104,6 +104,8 @@ P4002 対策（DEC-21）: datasource に `schemas = ["public", "auth"]` を書�
 ## 5. 主要列（実装時に落とさないもの）
 
 詳細な全列は計画 ER を正とし、Prisma 化時にこの節を「Prisma 準拠」に書き換える。
+
+**contact_inquiries:** `user_id`, `name`, `company_name`, `email`, `content`, `created_at`
 
 **projects:** `user_id`, `name`, `status`, `program_version`, `total_floor_area`, `deleted_at`
 
@@ -148,14 +150,30 @@ seed の中身は [master-data.md](./master-data.md)。物理テーブル名は 
 
 未ログイン（`anon`）は GRANT しないので読めない。
 
-### テーブルができてから（Phase C 以降）
+### C2 で入れたもの（`20260901120000_add_projects_table_and_rls`）
 
-- `projects`: `user_id = auth.uid()`。削除は論理削除でも所有者のみ
+| テーブル | 認証済みに許すこと |
+|----------|-------------------|
+| `projects` | 自分の行の ALL（`auth.uid() = user_id`）。論理削除は UPDATE |
+
+### C4 で入れたもの（`20260904150000_add_contact_inquiries_table_and_rls`）
+
+| テーブル | 認証済みに許すこと |
+|----------|-------------------|
+| `contact_inquiries` | INSERT（`user_id` は NULL または自分）。SELECT は `user_id = auth.uid()` の行のみ |
+
+未ログイン送信は Route Handler（Prisma）経由。`user_id` が NULL の行は Supabase 直アクセスでは読めない。
+
+### これから（Phase D 以降）
+
 - 案件の子すべて: `EXISTS (projects.user_id = auth.uid())`
 - `model_building_api_runs`: 計算結果 → 案件の所有者
-- `contact_inquiries`: 挿入は認証済み。自分の送信分だけ読める
 
 Prisma 用ロールが RLS を無視する場合でも、アプリケーションの `where` は省略しない（[architecture.md](./architecture.md) 4 節）。
+
+### Prisma 内部テーブル（`20260901130000_lock_down_prisma_migrations`）
+
+`_prisma_migrations` は Prisma が migrate 履歴を記録する内部表。業務データではない。Supabase の `anon` / `authenticated` からは **RLS 有効 + REVOKE** で API 経由のアクセスを禁止する。POLICY は付けない。
 
 ## 8. Storage
 

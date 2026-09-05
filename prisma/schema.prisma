@@ -129,9 +129,51 @@ model Profile {
   updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   company     Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
   authUser    AuthUser  @relation(fields: [id], references: [id], onDelete: Cascade)
+  projects    Project[]
+  contactInquiries ContactInquiry[]
 
   @@index([companyId], map: "idx_profiles_company_id")
   @@map("profiles")
+  @@schema("public")
+}
+
+// --- 案件（C2） ---
+
+/// 建物案件。計算値は持たず project_calculation_results へ（後続フェーズ）。
+model Project {
+  id             BigInt        @id @default(autoincrement())
+  userId         String        @map("user_id") @db.Uuid
+  name           String        @db.VarChar(255)
+  status         ProjectStatus @default(draft)
+  programVersion String        @default("3.10") @map("program_version") @db.VarChar(20)
+  totalFloorArea Decimal?      @map("total_floor_area") @db.Decimal(12, 2)
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt      DateTime?     @map("deleted_at") @db.Timestamptz(3)
+  user           Profile       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  program        MasterProgramVersion @relation(fields: [programVersion], references: [version])
+
+  @@index([userId], map: "idx_projects_user_id")
+  @@index([status], map: "idx_projects_status")
+  @@map("projects")
+  @@schema("public")
+}
+
+// --- お問い合わせ（C4） ---
+
+/// お問い合わせフォーム送信。未ログインは user_id NULL（CTL-02）。
+model ContactInquiry {
+  id          BigInt    @id @default(autoincrement())
+  userId      String?   @map("user_id") @db.Uuid
+  name        String    @db.VarChar(100)
+  companyName String?   @map("company_name") @db.VarChar(255)
+  email       String    @db.VarChar(255)
+  content     String    @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  user        Profile?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId], map: "idx_contact_inquiries_user_id")
+  @@map("contact_inquiries")
   @@schema("public")
 }
 
@@ -153,6 +195,7 @@ model MasterProgramVersion {
   insulationTypes          MasterInsulationType[]
   envelopeParts            MasterEnvelopePart[]
   orientations             MasterOrientation[]
+  projects                 Project[]
 
   @@map("master_program_versions")
   @@schema("public")

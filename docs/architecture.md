@@ -1,6 +1,6 @@
 # アーキテクチャ
 
-最終更新: 2026-08-23
+最終更新: 2026-09-01
 
 ## 1. 全体像
 
@@ -79,12 +79,80 @@ createProject(name, ifc)
 
 ## 4. 認可
 
-- セッション: `@supabase/ssr` で Cookie。
-- サーバ: `auth.uid()` 相当の UUID を取り、`projects.user_id` と照合してから Prisma する。
+- セッション: `@supabase/ssr` で Cookie（`middleware.ts` が JWT を更新）。
+- サーバ: `lib/auth/session.ts` の `getUserId()` / `requireUserId()`。`profiles.id` と同じ UUID。
 - RLS: 同趣旨の POLICY を DB にも置く（クライアントや将来の直アクセス用）。
 - マスタ: 認証済み読み取り。更新は seed / 管理者作業のみ（MVP に管理画面は無い）。
 
 Prisma の DB ユーザーが RLS をバイパスする場合でも、**アプリケーションの where を省略しない。**
+
+### 4.1 セッション取得（C1）
+
+| ファイル | 用途 |
+|----------|------|
+| `lib/auth/env.ts` | `NEXT_PUBLIC_SUPABASE_*` の検証 |
+| `lib/auth/server.ts` | サーバ用 Supabase クライアント |
+| `lib/auth/client.ts` | ブラウザ用（ログイン画面など） |
+| `lib/auth/session.ts` | `getAuthUser` / `getUserId` / `requireUserId` |
+| `lib/auth/http.ts` | Route Handler の 401 応答 |
+| `middleware.ts` | Cookie のセッション更新 |
+
+サーバでは **`getSession()` ではなく `getUser()`** を使う（JWT を Supabase に検証させる）。
+
+Route Handler の例:
+
+```typescript
+import { requireUserId } from "@/lib/auth/session";
+import { isUnauthorizedError, unauthorizedJsonResponse } from "@/lib/auth/http";
+
+export async function GET() {
+  try {
+    const userId = await requireUserId();
+    // Prisma では必ず where: { userId } 等を付ける
+    return Response.json({ userId });
+  } catch (error) {
+    if (isUnauthorizedError(error)) return unauthorizedJsonResponse();
+    throw error;
+  }
+}
+```
+
+確認用: `GET /api/me`（ログイン済み Cookie があれば `{ userId }`、無ければ 401）。
+
+### 4.2 案件 API（C2）
+
+Route Handler（REST）。入口は薄く、ユースケースは `lib/projects/service.ts`。
+
+| メソッド | パス | 説明 |
+|----------|------|------|
+| `GET` | `/api/projects` | 一覧。`?q=` 名前、`?status=` で絞り込み |
+| `POST` | `/api/projects` | 作成。body `{ name }`。既定 `status=draft`, `programVersion=3.10` |
+| `GET` | `/api/projects/[projectId]` | 1 件取得 |
+| `PATCH` | `/api/projects/[projectId]` | 更新。`name` / `status` |
+| `DELETE` | `/api/projects/[projectId]` | 論理削除（204） |
+
+認可: `requireUserId()` + Prisma の `where: { userId, deletedAt: null }`。RLS は `projects_all_own`（`auth.uid() = user_id`）。
+
+レスポンスの `id` は BigInt を文字列化（JSON の精度対策）。
+
+### 4.3 プロフィール・会社 API（C3）
+
+| メソッド | パス | 説明 |
+|----------|------|------|
+| `GET` | `/api/profile` | 自分のプロフィール（`displayName`, `company`, `email`） |
+| `PATCH` | `/api/profile` | 更新。`displayName` / `companyName`（find-or-create して `profiles.company_id` を設定） |
+| `GET` | `/api/companies` | 会社名検索。`?q=` 部分一致（最大 20 件） |
+| `POST` | `/api/companies` | 名前で find-or-create。body `{ name }` |
+
+`companyName` を `null` または `""` にすると会社紐づけを外す。会社の UPDATE / DELETE は RLS 上付けていない（B7）。新規行の INSERT のみ `authenticated` 可。
+
+### 4.4 お問い合わせ API（C4）
+
+| メソッド | パス | 説明 |
+|----------|------|------|
+| `POST` | `/api/contact-inquiries` | 送信。body `{ name, companyName?, email, content }` |
+
+未ログインでも POST 可（CTL-02）。ログイン済み Cookie があれば `user_id` を付与（CTL-01）。RLS は認証済み INSERT と自分の行 SELECT のみ。未ログイン送信は Next.js API（Prisma）経由。
 
 ## 5. モジュール境界（実装時の目標）
 
@@ -96,6 +164,9 @@ app/api/             HTTP の入口（薄い）
 lib/auth/            セッション取得
 lib/db/              Prisma client 単例
 lib/projects/        案件ユースケース
+lib/companies/       会社 find-or-create
+lib/profile/         プロフィール取得・更新
+lib/contact-inquiries/  お問い合わせ送信
 lib/extraction/      IFC 抽出の DTO とバリデーション
 lib/calculation/     API クライアントとレスポンスパース
 lib/masters/         マスタ参照
