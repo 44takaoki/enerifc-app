@@ -5,11 +5,13 @@ import {
 } from "@/lib/auth/http";
 import { requireUserId } from "@/lib/auth/session";
 import { ProjectNotFoundError } from "@/lib/projects/errors";
-import {
-  createProject,
-  listProjects,
-} from "@/lib/projects/service";
+import { createProject, listProjects } from "@/lib/projects/service";
 import { parseProjectStatus } from "@/lib/projects/validation";
+import type {
+  GetProjectsResponse,
+  PostProjectRequestBody,
+  PostProjectResponse,
+} from "@/lib/projects/api-types";
 
 /** 自分の案件一覧。`?q=` 名前検索、`?status=` で絞り込み。 */
 export async function GET(request: Request) {
@@ -28,7 +30,8 @@ export async function GET(request: Request) {
       status,
     });
 
-    return Response.json({ projects });
+    const body: GetProjectsResponse = { projects };
+    return Response.json(body);
   } catch (error) {
     if (isUnauthorizedError(error)) {
       return unauthorizedJsonResponse();
@@ -41,14 +44,18 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const userId = await requireUserId();
-    const body = (await request.json()) as { name?: unknown };
+    const raw = (await request.json()) as {
+      name?: unknown;
+    } as PostProjectRequestBody;
 
-    if (typeof body.name !== "string") {
+    if (typeof raw.name !== "string") {
       return badRequestJsonResponse("name is required");
     }
 
-    const project = await createProject(userId, { name: body.name });
-    return Response.json({ project }, { status: 201 });
+    const project = await createProject(userId, { name: raw.name });
+
+    const body: PostProjectResponse = { project };
+    return Response.json(body, { status: 201 });
   } catch (error) {
     if (isUnauthorizedError(error)) {
       return unauthorizedJsonResponse();

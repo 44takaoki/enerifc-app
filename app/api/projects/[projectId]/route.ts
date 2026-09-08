@@ -13,6 +13,11 @@ import {
   updateProject,
 } from "@/lib/projects/service";
 import { parseProjectStatus } from "@/lib/projects/validation";
+import type {
+  GetProjectResponse,
+  PatchProjectRequestBody,
+  PatchProjectResponse,
+} from "@/lib/projects/api-types";
 
 type RouteContext = {
   params: Promise<{ projectId: string }>;
@@ -30,7 +35,8 @@ export async function GET(_request: Request, context: RouteContext) {
     }
 
     const project = await getProject(userId, projectId);
-    return Response.json({ project });
+    const body: GetProjectResponse = { project };
+    return Response.json(body);
   } catch (error) {
     if (isUnauthorizedError(error)) {
       return unauthorizedJsonResponse();
@@ -53,33 +59,34 @@ export async function PATCH(request: Request, context: RouteContext) {
       return badRequestJsonResponse("invalid project id");
     }
 
-    const body = (await request.json()) as {
-      name?: unknown;
-      status?: unknown;
-    };
+    const requestBody = (await request.json()) as PatchProjectRequestBody;
 
-    if (body.name !== undefined && typeof body.name !== "string") {
+    if (
+      requestBody.name !== undefined &&
+      typeof requestBody.name !== "string"
+    ) {
       return badRequestJsonResponse("name must be a string");
     }
 
     let status: ReturnType<typeof parseProjectStatus>;
-    if (body.status === undefined) {
+    if (requestBody.status === undefined) {
       status = undefined;
-    } else if (typeof body.status !== "string") {
+    } else if (typeof requestBody.status !== "string") {
       return badRequestJsonResponse("status must be a string");
     } else {
-      status = parseProjectStatus(body.status);
+      status = parseProjectStatus(requestBody.status);
       if (status === "invalid") {
         return badRequestJsonResponse("invalid status");
       }
     }
 
     const project = await updateProject(userId, projectId, {
-      name: body.name,
+      name: requestBody.name,
       status,
     });
 
-    return Response.json({ project });
+    const responseBody: PatchProjectResponse = { project };
+    return Response.json(responseBody);
   } catch (error) {
     if (isUnauthorizedError(error)) {
       return unauthorizedJsonResponse();

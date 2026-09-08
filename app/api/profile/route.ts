@@ -7,6 +7,11 @@ import {
 import { getAuthUser, requireUserId } from "@/lib/auth/session";
 import { ProfileNotFoundError } from "@/lib/profile/errors";
 import { getProfile, updateProfile } from "@/lib/profile/service";
+import type {
+  GetProfileResponse,
+  PatchProfileRequestBody,
+  PatchProfileResponse,
+} from "@/lib/profile/api-types";
 
 /** 自分のプロフィール（表示名・会社・メール）。 */
 export async function GET() {
@@ -14,7 +19,8 @@ export async function GET() {
     const userId = await requireUserId();
     const user = await getAuthUser();
     const profile = await getProfile(userId, user?.email ?? null);
-    return Response.json({ profile });
+    const body: GetProfileResponse = { profile };
+    return Response.json(body);
   } catch (error) {
     if (isUnauthorizedError(error)) {
       return unauthorizedJsonResponse();
@@ -35,32 +41,30 @@ export async function PATCH(request: Request) {
   try {
     const userId = await requireUserId();
     const user = await getAuthUser();
-    const body = (await request.json()) as {
-      displayName?: unknown;
-      companyName?: unknown;
-    };
+    const requestBody = (await request.json()) as PatchProfileRequestBody;
 
     if (
-      body.displayName !== undefined &&
-      typeof body.displayName !== "string"
+      requestBody.displayName !== undefined &&
+      typeof requestBody.displayName !== "string"
     ) {
       return badRequestJsonResponse("displayName must be a string");
     }
 
     if (
-      body.companyName !== undefined &&
-      body.companyName !== null &&
-      typeof body.companyName !== "string"
+      requestBody.companyName !== undefined &&
+      requestBody.companyName !== null &&
+      typeof requestBody.companyName !== "string"
     ) {
       return badRequestJsonResponse("companyName must be a string or null");
     }
 
     const profile = await updateProfile(userId, user?.email ?? null, {
-      displayName: body.displayName,
-      companyName: body.companyName as string | null | undefined,
+      displayName: requestBody.displayName,
+      companyName: requestBody.companyName as string | null | undefined,
     });
 
-    return Response.json({ profile });
+    const responseBody: PatchProfileResponse = { profile };
+    return Response.json(responseBody);
   } catch (error) {
     if (isUnauthorizedError(error)) {
       return unauthorizedJsonResponse();

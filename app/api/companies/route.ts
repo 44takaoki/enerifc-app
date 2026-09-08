@@ -8,6 +8,11 @@ import {
   findOrCreateCompanyByName,
   searchCompanies,
 } from "@/lib/companies/service";
+import type {
+  GetCompaniesResponse,
+  PostCompanyRequestBody,
+  PostCompanyResponse,
+} from "@/lib/companies/api-types";
 
 /** 会社名の部分一致検索。`?q=` 必須（空なら空配列）。 */
 export async function GET(request: Request) {
@@ -15,7 +20,9 @@ export async function GET(request: Request) {
     await requireUserId();
     const { searchParams } = new URL(request.url);
     const companies = await searchCompanies(searchParams.get("q") ?? "");
-    return Response.json({ companies });
+
+    const body: GetCompaniesResponse = { companies };
+    return Response.json(body);
   } catch (error) {
     if (isUnauthorizedError(error)) {
       return unauthorizedJsonResponse();
@@ -28,14 +35,18 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     await requireUserId();
-    const body = (await request.json()) as { name?: unknown };
+    const raw = (await request.json()) as {
+      name?: unknown;
+    } as PostCompanyRequestBody;
 
-    if (typeof body.name !== "string") {
+    if (typeof raw.name !== "string") {
       return badRequestJsonResponse("name is required");
     }
 
-    const company = await findOrCreateCompanyByName(body.name);
-    return Response.json({ company }, { status: 200 });
+    const company = await findOrCreateCompanyByName(raw.name);
+
+    const body: PostCompanyResponse = { company };
+    return Response.json(body);
   } catch (error) {
     if (isUnauthorizedError(error)) {
       return unauthorizedJsonResponse();

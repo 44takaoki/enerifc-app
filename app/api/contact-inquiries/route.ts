@@ -1,6 +1,10 @@
 import { badRequestJsonResponse } from "@/lib/auth/http";
 import { getUserId } from "@/lib/auth/session";
 import { createContactInquiry } from "@/lib/contact-inquiries/service";
+import type {
+  PostContactInquiryRequestBody,
+  PostContactInquiryResponse,
+} from "@/lib/contact-inquiries/api-types";
 
 /**
  * お問い合わせ送信（CTL-01 / CTL-02）。
@@ -10,41 +14,37 @@ import { createContactInquiry } from "@/lib/contact-inquiries/service";
 export async function POST(request: Request) {
   try {
     const userId = await getUserId();
-    const body = (await request.json()) as {
-      name?: unknown;
-      companyName?: unknown;
-      email?: unknown;
-      content?: unknown;
-    };
+    const requestBody = (await request.json()) as PostContactInquiryRequestBody;
 
-    if (typeof body.name !== "string") {
+    if (typeof requestBody.name !== "string") {
       return badRequestJsonResponse("name is required");
     }
-    if (typeof body.email !== "string") {
+    if (typeof requestBody.email !== "string") {
       return badRequestJsonResponse("email is required");
     }
-    if (typeof body.content !== "string") {
+    if (typeof requestBody.content !== "string") {
       return badRequestJsonResponse("content is required");
     }
     if (
-      body.companyName !== undefined &&
-      body.companyName !== null &&
-      typeof body.companyName !== "string"
+      requestBody.companyName !== undefined &&
+      requestBody.companyName !== null &&
+      typeof requestBody.companyName !== "string"
     ) {
       return badRequestJsonResponse("companyName must be a string or null");
     }
 
     const inquiry = await createContactInquiry(
       {
-        name: body.name,
-        companyName: body.companyName as string | null | undefined,
-        email: body.email,
-        content: body.content,
+        name: requestBody.name,
+        companyName: requestBody.companyName as string | null | undefined,
+        email: requestBody.email,
+        content: requestBody.content,
       },
-      userId,
+      userId
     );
 
-    return Response.json({ inquiry }, { status: 201 });
+    const responseBody: PostContactInquiryResponse = { inquiry };
+    return Response.json(responseBody, { status: 201 });
   } catch (error) {
     if (error instanceof Error) {
       const message = error.message;
