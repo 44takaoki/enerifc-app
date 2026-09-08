@@ -1,7 +1,7 @@
 # 進捗とフェーズ
 
-最終更新: 2026-08-26  
-ステータス: **B7 完了。Phase B 終了。次は C1（セッション取得）。**
+最終更新: 2026-09-01  
+ステータス: **フェーズ C 完了。次は D1（Storage と project_ifc_files）。**
 
 レビューは 1 回あたり差分 1000 行以内。[development-guide.md](./development-guide.md) 参照。
 
@@ -36,7 +36,7 @@
 | B6 | companies / profiles + Auth トリガー SQL | Prisma + migrate | 中・完了 |
 | B7 | RLS ポリシー（プロフィールとマスタ） | SQL マイグレーション | 小〜中・完了 |
 
-**次にやる推奨: C1。** DEC-01（React/Lit）はビューアまで確定しなくてよい。
+**次にやる推奨: D1。**
 
 外部講師への依頼は B2 では出さない（DEC-16）。実装は B7 まで進め、**提出は B1〜B7 を 1 本にまとめる。** 1000 行超過時は依頼文で講師に伝える。
 
@@ -44,10 +44,10 @@
 
 | ID | スライス | 内容 |
 |----|----------|------|
-| C1 | セッション取得ユーティリティ | Supabase SSR + サーバで user id |
-| C2 | projects CRUD（論理削除） | RLS + Prisma where |
-| C3 | companies の find-or-create（アカウント更新の準備） | |
-| C4 | contact_inquiries POST | |
+| C1 | セッション取得ユーティリティ | `lib/auth/*` + middleware | 小・完了 |
+| C2 | projects CRUD（論理削除） | RLS + Prisma where | 小〜中・完了 |
+| C3 | companies の find-or-create（アカウント更新の準備） | `lib/companies/`, `lib/profile/`, `/api/profile` | 小・完了 |
+| C4 | contact_inquiries POST | `lib/contact-inquiries/`, `/api/contact-inquiries` | 小・完了 |
 
 この時点で REST または Server Actions の形を [architecture.md](./architecture.md) に追記する。
 
@@ -89,11 +89,12 @@ DEC-01 を確認してから。
 
 ## 今のリポジトリ状態
 
-- Prisma 導入済み。enum、`master_*` 定義、B3〜B5 seed、`companies` / `profiles` + Auth トリガー（B6）、RLS（B7）
-- `auth` は Prisma の schemas に載せるが DDL しない（DEC-21 / `prisma.config.ts`）
-- 投入: migrate 後に `npm run db:seed`
-- 画面・That Open は未着手
-- 計画 SQL はリポジトリ外 `enerifc_DB_plannning`
+- Phase B 完了（マスタ seed、profiles、RLS）
+- Phase C1: `@supabase/ssr` でサーバから `userId` を取得可能（`lib/auth/`）
+- Phase C2: `projects` CRUD（`lib/projects/`、`/api/projects`）
+- Phase C3: 会社 find-or-create + プロフィール API（`/api/profile`, `/api/companies`）
+- Phase C4: お問い合わせ POST（`/api/contact-inquiries`、未ログイン可）
+- 確認: プロフィールは `GET/PATCH /api/profile`、問い合わせは `POST /api/contact-inquiries`
 
 ## 変更したら
 
